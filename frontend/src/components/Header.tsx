@@ -92,7 +92,7 @@ const Header: React.FC = () => {
   const handleLogout = () => {
     clearToken();
     localStorage.removeItem('user_info');
-    window.location.href = '/login';
+    navigate('/login');
   };
 
   // Close dropdown on outside click

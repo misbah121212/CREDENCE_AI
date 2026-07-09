@@ -111,7 +111,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenCopilot }) => {
   const handleLogout = () => {
     clearToken();
     localStorage.removeItem('user_info');
-    window.location.href = '/login';
+    navigate('/login');
   };
 
   // Close dropdown on outside click
