@@ -237,7 +237,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <IntroLoader />
-      <BrowserRouter>
+      <BrowserRouter basename="/CREDENCE_AI">
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
