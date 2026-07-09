@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend-db:/backend-db
+    environment:
+      - DATABASE_URL=sqlite:////backend-db/credence_ai.db
+      - SECRET_KEY=supersecretkeyforcredenceai1234567890
+      - DEBUG=False
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  backend-db:

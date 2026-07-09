@@ -1,0 +1,26 @@
+# Virtual Environment
+backend/venv/
+venv/
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# Node modules & builds
+frontend/node_modules/
+node_modules/
+frontend/dist/
+dist/
+
+# SQLite databases (Keep or ignore depending on preference - usually ignore, but we can check it in if needed)
+# backend/credence_ai.db*
+
+# Logs & temp files
+*.log
+.DS_Store
+.idea/
+.vscode/
+.gemini/
+.agents/
+walkthrough.md
+task.md
+implementation_plan.md
