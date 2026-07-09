@@ -23,6 +23,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy backend files
 COPY . /backend/
 
+# Regenerate model artifacts in container environment to prevent pickle version mismatches
+RUN python -m app.ai_engine.trainer
+
 # Expose port
 EXPOSE 8000
 
