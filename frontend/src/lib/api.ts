@@ -3,7 +3,7 @@
  * All requests to the FastAPI backend go through this module.
  */
 
-const BASE_URL = 'http://localhost:8005/api/v1';
+const BASE_URL = 'https://credence-ai-te1m.onrender.com/api/v1';
 
 // €€ Token helpers €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€
 export function getToken(): string | null {
