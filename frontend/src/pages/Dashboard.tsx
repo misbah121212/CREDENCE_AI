@@ -96,6 +96,16 @@ const fallbackAlerts: Alert[] = [
   { id: '4', customer_id: 'e7f1d5ba-ef7b-40a3-ae9d-525495a78457', alert_message: 'Multiple loan queries flagged in bureau for Sunita Rao', is_read: false, created_at: '2026-07-08T09:15:00' },
 ];
 
+// Simple global SWR cache for Dashboard to load instantly when switching tabs
+let dashboardCache: {
+  alerts: Alert[];
+  recentPredictions: Array<{ customer?: Customer; prediction: Prediction }>;
+  totalCustomers: number;
+  highRiskCount: number;
+  segmentationData: any[];
+  timestamp: number;
+} | null = null;
+
 const Dashboard: React.FC<{ onOpenCopilot?: () => void }> = ({ onOpenCopilot }) => {
   const navigate = useNavigate();
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -116,11 +126,20 @@ const Dashboard: React.FC<{ onOpenCopilot?: () => void }> = ({ onOpenCopilot }) 
     { name: 'Critical', value: 3, fill: '#ef4444' },
   ]);
 
-
   useEffect(() => {
     const load = async () => {
       try {
-        setLoading(true);
+        if (dashboardCache && Date.now() - dashboardCache.timestamp < 30000) { // 30s cache TTL
+          setAlerts(dashboardCache.alerts);
+          setRecentPredictions(dashboardCache.recentPredictions);
+          setTotalCustomers(dashboardCache.totalCustomers);
+          setHighRiskCount(dashboardCache.highRiskCount);
+          setSegmentationData(dashboardCache.segmentationData);
+          setLoading(false);
+        } else {
+          setLoading(true);
+        }
+        
         // Load alerts
         const { alerts: a } = await aiApi.getAlerts(0, 5);
         
@@ -131,11 +150,9 @@ const Dashboard: React.FC<{ onOpenCopilot?: () => void }> = ({ onOpenCopilot }) 
             mergedAlerts.push(fb);
           }
         });
-        setAlerts(mergedAlerts);
 
         // Load customers + predictions
         const { customers, total } = await customerApi.list(0, 10);
-        setTotalCustomers(total);
 
         const withPreds = await Promise.all(
           customers.map(async (customer) => {
@@ -165,18 +182,34 @@ const Dashboard: React.FC<{ onOpenCopilot?: () => void }> = ({ onOpenCopilot }) 
         const critPct = Math.max(3, Math.round(highPct * 0.3));
         const elevPct = Math.max(8, highPct - critPct);
 
-        setHighRiskCount(high);
-        setSegmentationData([
+        const newSegData = [
           { name: 'Low', value: lowPct, fill: '#10b981' },
           { name: 'Moderate', value: medPct, fill: '#f59e0b' },
           { name: 'Elevated', value: elevPct, fill: '#c084fc' },
           { name: 'Critical', value: critPct, fill: '#ef4444' },
-        ]);
+        ];
 
         const sorted = valid.sort((a, b) =>
           new Date(b.prediction.prediction_date ?? 0).getTime() - new Date(a.prediction.prediction_date ?? 0).getTime()
         );
-        setRecentPredictions(sorted.slice(0, 5));
+        const sortedPredictions = sorted.slice(0, 5);
+
+        // Update cache
+        dashboardCache = {
+          alerts: mergedAlerts,
+          recentPredictions: sortedPredictions,
+          totalCustomers: total,
+          highRiskCount: high,
+          segmentationData: newSegData,
+          timestamp: Date.now()
+        };
+
+        // Update states
+        setAlerts(mergedAlerts);
+        setRecentPredictions(sortedPredictions);
+        setTotalCustomers(total);
+        setHighRiskCount(high);
+        setSegmentationData(newSegData);
       } catch (err) {
         console.error('Dashboard load error:', err);
       } finally {

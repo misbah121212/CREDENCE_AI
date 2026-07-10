@@ -33,6 +33,15 @@ interface CustomerRow {
   prediction?: Prediction;
 }
 
+// Simple global SWR cache for CustomerList to load pages instantly
+let customerCache: {
+  [key: string]: {
+    rows: CustomerRow[];
+    total: number;
+    timestamp: number;
+  }
+} = {};
+
 const CustomerList: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [rows, setRows] = useState<CustomerRow[]>([]);
@@ -41,6 +50,8 @@ const CustomerList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -59,13 +70,26 @@ const CustomerList: React.FC = () => {
   useEffect(() => {
     const urlSearch = searchParams.get('search') || '';
     setSearch(urlSearch);
+    setPage(1);
   }, [searchParams]);
 
-  const fetchData = useCallback(async (searchQuery?: string) => {
-    setLoading(true);
+  const fetchData = useCallback(async (searchQuery?: string, pageNum = 1) => {
+    const cacheKey = `${pageNum}-${searchQuery || ''}`;
+    const cached = customerCache[cacheKey];
+    
+    // SWR Cache Hit: Instantly load cached rows and avoid full screen spinner!
+    if (cached && Date.now() - cached.timestamp < 60000) { // 60s TTL
+      setRows(cached.rows);
+      setTotal(cached.total);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    
     setError('');
     try {
-      const { customers, total: t } = await customerApi.list(0, 100, searchQuery);
+      const skipNum = (pageNum - 1) * limit;
+      const { customers, total: t } = await customerApi.list(skipNum, limit, searchQuery);
       setTotal(t);
 
       // Fetch predictions for each customer in parallel
@@ -79,21 +103,31 @@ const CustomerList: React.FC = () => {
           }
         })
       );
+      
+      // Update Cache
+      customerCache[cacheKey] = {
+        rows: withPredictions,
+        total: t,
+        timestamp: Date.now()
+      };
+
       setRows(withPredictions);
     } catch (err: any) {
-      setError(err.message || 'Failed to load customers.');
+      if (!cached) {
+        setError(err.message || 'Failed to load customers.');
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Fetch data on search change (debounced)
+  // Fetch data on search or page change
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
-      fetchData(search);
+      fetchData(search, page);
     }, 300);
     return () => clearTimeout(delayDebounce);
-  }, [search, fetchData]);
+  }, [search, page, fetchData]);
 
   const filtered = rows.filter(({ prediction }) => {
     const category = prediction?.risk_category;
@@ -294,11 +328,23 @@ const CustomerList: React.FC = () => {
             </table>
           </div>
           <div className="px-6 py-4 border-t border-white/8 flex items-center justify-between text-xs text-textMuted font-mono">
-            <span>Showing {filtered.length} of {total} customers</span>
-            <div className="flex gap-1">
-              <button className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition border border-white/8">Prev</button>
-              <button className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary to-accent-purple text-white font-bold">1</button>
-              <button className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition border border-white/8">Next</button>
+            <span>Showing {total === 0 ? 0 : ((page - 1) * limit) + 1} - {Math.min(page * limit, total)} of {total} customers</span>
+            <div className="flex gap-3 items-center">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1 || loading}
+                className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition border border-white/8 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <span className="text-textMain">Page {page} of {Math.ceil(total / limit) || 1}</span>
+              <button
+                onClick={() => setPage(p => Math.min(Math.ceil(total / limit), p + 1))}
+                disabled={page >= Math.ceil(total / limit) || loading}
+                className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition border border-white/8 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
