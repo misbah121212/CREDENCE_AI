@@ -134,7 +134,7 @@ const Dashboard: React.FC<{ onOpenCopilot?: () => void }> = ({ onOpenCopilot }) 
         setAlerts(mergedAlerts);
 
         // Load customers + predictions
-        const { customers, total } = await customerApi.list(0, 100);
+        const { customers, total } = await customerApi.list(0, 10);
         setTotalCustomers(total);
 
         const withPreds = await Promise.all(
