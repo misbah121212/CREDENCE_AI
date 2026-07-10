@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ThreeDSphere from './ThreeDSphere';
 
 const IntroLoader: React.FC = () => {
@@ -44,7 +44,7 @@ const IntroLoader: React.FC = () => {
       <div className="flex flex-col items-center gap-6 text-center z-10">
         {/* Glowing 3D Orb */}
         <div className="animate-scale-up">
-          <ThreeDSphere size="lg" />
+          <ThreeDSphere size="lg" text={"CRAFTED BY\n2D DEVELOPERS"} />
         </div>
 
         {/* Brand Text */}
